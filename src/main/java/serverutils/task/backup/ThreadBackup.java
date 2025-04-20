@@ -2,10 +2,8 @@ package serverutils.task.backup;
 
 import static serverutils.ServerUtilitiesConfig.backups;
 import static serverutils.ServerUtilitiesNotifications.BACKUP;
-import static serverutils.task.backup.BackupTask.BACKUP_TEMP_FOLDER;
 
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -18,11 +16,8 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Set;
 
-import net.minecraft.nbt.CompressedStreamTools;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.world.WorldServer;
-import net.minecraft.world.chunk.storage.RegionFile;
 import net.minecraft.world.chunk.storage.RegionFileCache;
 
 import com.gtnewhorizon.gtnhlib.util.CoordinatePacker;
@@ -184,8 +179,6 @@ public class ThreadBackup extends Thread {
         for (Object2ObjectMap.Entry<File, ObjectSet<ChunkDimPos>> entry : dimRegionClaims.object2ObjectEntrySet()) {
             File file = entry.getKey();
             File dimensionRoot = file.getParentFile().getParentFile();
-            File tempFile = FileUtils.newFile(new File(BACKUP_TEMP_FOLDER, file.getName()));
-            RegionFile tempRegion = new RegionFile(tempFile);
             boolean hasData = false;
 
             for (ChunkDimPos pos : entry.getValue()) {
@@ -193,18 +186,11 @@ public class ThreadBackup extends Thread {
                 if (in == null) continue;
                 savedChunks++;
                 hasData = true;
-                NBTTagCompound tag = CompressedStreamTools.read(in);
-                DataOutputStream tempOut = tempRegion.getChunkDataOutputStream(pos.posX & 31, pos.posZ & 31);
-                CompressedStreamTools.write(tag, tempOut);
-                tempOut.close();
             }
 
-            tempRegion.close();
             if (hasData) {
-                compressFile(FileUtils.getRelativePath(file), tempFile, compressor, index++, totalFiles);
+                compressFile(FileUtils.getRelativePath(file), file, compressor, index++, totalFiles);
             }
-
-            FileUtils.delete(tempFile);
         }
 
         for (File file : files) {
